@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "64238607602",
+    "project_id": "smartpgto",
+    "storage_bucket": "smartpgto.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:64238607602:android:1707591f19fa745c90046b",
+        "android_client_info": {
+          "package_name": "com.example.sistema_pagamento"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIWfLEeYCW4S03U8hbvJa90V9HMQa1kEQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
