@@ -1,121 +1,71 @@
-// ignore_for_file: file_names
 // ignore_for_file: prefer_const_constructors
 
-import 'package:sistema_pagamento/model/Produto.dart';
-import 'package:sistema_pagamento/screens/telaCadastro.dart';
-import 'package:sistema_pagamento/utils/produtoHelper.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sistema_pagamento/screens/telaCadastro.dart';
 
-class TelaProdutos extends StatefulWidget {
-  const TelaProdutos({super.key});
-
-  @override
-  State<TelaProdutos> createState() => _TelaProdutosState();
-}
-
-class _TelaProdutosState extends State<TelaProdutos> {
-  List<Produto> listaProdutos = List.empty(growable: true);
-
-  ProdutoHelper db = ProdutoHelper();
-
-  void recuperarProdutos() async {
-    List produtosRecuperados = await db.listarProdutos();
-    List<Produto> listaTemporaria = List.empty(growable: true);
-    for (var produto in produtosRecuperados) {
-      Produto obj = Produto(0, "", "", 0);
-      obj.toModel(produto);
-      listaTemporaria.add(obj);
-    }
-    setState(() {
-      listaProdutos = listaTemporaria;
-    });
-  }
-
-  void removerProduto(int? id) async {
-    await db.excluirProduto(id);
-    recuperarProdutos();
-  }
-
-  void exibirTelaConfirma(int? id) {
-    showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Excluir Produto"),
-            content: Text("Você tem certeza que deseja excluir este produto?"),
-            backgroundColor: Colors.white,
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    removerProduto(id);
-                  },
-                  style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.redAccent),
-                  child: Text("Sim")),
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.blueGrey),
-                  child: Text("Não")),
-            ],
-          );
-        });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    recuperarProdutos();
-  }
+class ProductListScreen extends StatelessWidget {
+  const ProductListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text("Meus produtos"),
-          centerTitle: true,
-          backgroundColor: Colors.blueGrey,
-        ),
-        body: Column(
-          children: [
-            Expanded(
-                child: ListView.builder(
-                    itemCount: listaProdutos.length,
-                    itemBuilder: (context, index) {
-                      final Produto p = listaProdutos[index];
-                      return Card(
-                        child: ListTile(
-                          title: Text(p.nome),
-                          subtitle: Text(p.preco.toString()),
-                          trailing:
-                              Row(mainAxisSize: MainAxisSize.min, children: [
-                            GestureDetector(
-                              onTap: () {
-                                exibirTelaConfirma(p.id);
-                              },
-                              child: Icon(Icons.delete, color: Colors.blueGrey),
-                            ),
-                            SizedBox(width: 10),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            TelaCadastro(produto: p)));
-                              },
-                              child: Icon(Icons.edit, color: Colors.blueGrey),
-                            ),
-                          ]),
-                        ),
-                      );
-                    }))
-          ],
-        ));
+      appBar: AppBar(
+        title: Text('Product List'),
+      ),
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance.collection('products').snapshots(),
+        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          final products = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+
+              return ListTile(
+                title: Text(product['name']),
+                subtitle: Text(
+                    'Price: \$${product['price']} - Recurrence: ${product['recurrencePeriod']} days'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.edit),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ProductRegisterScreen(productId: product.id),
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        _deleteProduct(product.id);
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _deleteProduct(String productId) {
+    FirebaseFirestore.instance.collection('products').doc(productId).delete();
   }
 }

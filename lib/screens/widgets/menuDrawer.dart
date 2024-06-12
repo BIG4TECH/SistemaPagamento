@@ -56,8 +56,10 @@ Widget menuDrawer(BuildContext context) {
           ),
           onTap: () {
             Navigator.pop(context);
-            Navigator.push(context,
-                MaterialPageRoute(builder: (context) => TelaCadastro()));
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => ProductRegisterScreen()));
           },
         ),
         ListTile(
@@ -69,7 +71,7 @@ Widget menuDrawer(BuildContext context) {
           onTap: () {
             Navigator.pop(context);
             Navigator.push(context,
-                MaterialPageRoute(builder: (context) => TelaProdutos()));
+                MaterialPageRoute(builder: (context) => ProductListScreen()));
           },
         )
       ],

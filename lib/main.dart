@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sistema_pagamento/screens/telaCadastroPessoa.dart';
+import 'package:sistema_pagamento/screens/telaLogin.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -9,5 +10,5 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(const MaterialApp(
-      debugShowCheckedModeBanner: false, home: SignupScreen()));
+      debugShowCheckedModeBanner: false, home: LoginScreen()));
 }

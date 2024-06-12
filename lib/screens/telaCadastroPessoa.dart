@@ -1,8 +1,9 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sistema_pagamento/screens/telaLogin.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -45,6 +46,8 @@ class _SignupScreenState extends State<SignupScreen> {
             content: Text('Cadastro concluído: ${userCredential.user!.email}'),
             duration: Duration(seconds: 5), // Duração da SnackBar
           );
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => LoginScreen()));
           // Exibe a SnackBar
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
         } else {

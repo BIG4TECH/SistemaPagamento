@@ -1,64 +1,76 @@
-// ignore_for_file: prefer_const_constructors, file_names
-import 'package:sistema_pagamento/model/Produto.dart';
-import 'package:sistema_pagamento/screens/home.dart';
-import 'package:sistema_pagamento/utils/produtoHelper.dart';
+// ignore_for_file: prefer_const_constructors, prefer_const_constructors_in_immutables, library_private_types_in_public_api, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class TelaCadastro extends StatefulWidget {
+class ProductRegisterScreen extends StatefulWidget {
+  final String? productId;
+
+  ProductRegisterScreen({super.key, this.productId});
+
   @override
-  State<TelaCadastro> createState() => _TelaCadastroState();
-  Produto? produto;
-
-  TelaCadastro({this.produto});
+  _ProductRegisterScreenState createState() => _ProductRegisterScreenState();
 }
 
-class _TelaCadastroState extends State<TelaCadastro> {
-  TextEditingController txtnome = TextEditingController();
-  TextEditingController txtmarca = TextEditingController();
-  TextEditingController txtpreco = TextEditingController();
-
-  ProdutoHelper db = ProdutoHelper();
-  String textBotao = "Adicionar Produto";
-  String textAppBar = "Cadastro de Produtos";
-  int? idProduto;
-
-  void salvarProduto({Produto? produto}) async {
-    if (produto == null) {
-      Produto obj = Produto(
-          null, txtnome.text, txtmarca.text, double.parse(txtpreco.text));
-      int? resultado = await db.cadastrarProduto(obj);
-      setState(() {
-        if (resultado != null) {
-          Navigator.push(
-              context, MaterialPageRoute(builder: (context) => Home()));
-        }
-      });
-    } else {
-      produto.nome = txtnome.text;
-      produto.marca = txtmarca.text;
-      produto.preco = double.parse(txtpreco.text);
-      produto.id = idProduto;
-      int? resultado = await db.alterarProduto(produto);
-      setState(() {
-        if (resultado != null) {
-          Navigator.push(
-              context, MaterialPageRoute(builder: (context) => Home()));
-        }
-      });
-    }
-  }
+class _ProductRegisterScreenState extends State<ProductRegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  int _recurrencePeriod = 30;
+  String _paymentOption = 'Cartão de crédito/débito';
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.produto != null) {
-      txtnome.text = widget.produto!.nome;
-      txtmarca.text = widget.produto!.marca;
-      txtpreco.text = widget.produto!.preco.toString();
-      idProduto = widget.produto!.id;
+    if (widget.productId != null) {
+      _loadProduct();
+    }
+  }
 
-      textBotao = "Editar Produto";
-      textAppBar = "Edição de Produto";
+  void _loadProduct() async {
+    setState(() {
+      _isLoading = true;
+    });
+    DocumentSnapshot product = await FirebaseFirestore.instance
+        .collection('products')
+        .doc(widget.productId)
+        .get();
+    _nameController.text = product['name'];
+    _priceController.text = product['price'].toString();
+    _recurrencePeriod = product['recurrencePeriod'];
+    _paymentOption = product['paymentOption'];
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _registerOrEditProduct() async {
+    if (_formKey.currentState!.validate()) {
+      if (widget.productId == null) {
+        // Register new product
+        await FirebaseFirestore.instance.collection('products').add({
+          'name': _nameController.text,
+          'price': double.parse(_priceController.text),
+          'recurrencePeriod': _recurrencePeriod,
+          'paymentOption': _paymentOption,
+        });
+      } else {
+        // Update existing product
+        await FirebaseFirestore.instance
+            .collection('products')
+            .doc(widget.productId)
+            .update({
+          'name': _nameController.text,
+          'price': double.parse(_priceController.text),
+          'recurrencePeriod': _recurrencePeriod,
+          'paymentOption': _paymentOption,
+        });
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Produto ${widget.productId == null ? 'registrado' : 'atualizado'} com sucesso!')));
+      Navigator.of(context).pop();
     }
   }
 
@@ -66,61 +78,83 @@ class _TelaCadastroState extends State<TelaCadastro> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(textAppBar),
-        centerTitle: true,
-        backgroundColor: Colors.blueGrey,
+        title: Text(widget.productId == null
+            ? 'Registro de produtos'
+            : 'Edição de produtos'),
       ),
-      body: SingleChildScrollView(
-        child: Form(
-            key: null,
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: txtnome,
-                  keyboardType: TextInputType.text,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(labelText: "Nome"),
-                  style: TextStyle(fontSize: 20),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(labelText: 'Nome do produto'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor digite o nome do produto';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: _priceController,
+                      decoration: InputDecoration(labelText: 'Preço'),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor digite o preço';
+                        }
+                        return null;
+                      },
+                    ),
+                    DropdownButtonFormField<int>(
+                      value: _recurrencePeriod,
+                      decoration:
+                          InputDecoration(labelText: 'Periodo de recorrência'),
+                      items: [30, 60, 90].map((int value) {
+                        return DropdownMenuItem<int>(
+                          value: value,
+                          child: Text('$value dias'),
+                        );
+                      }).toList(),
+                      onChanged: (int? newValue) {
+                        setState(() {
+                          _recurrencePeriod = newValue!;
+                        });
+                      },
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: _paymentOption,
+                      decoration:
+                          InputDecoration(labelText: 'Opção de Pagamento'),
+                      items: ['Cartão de crédito/débito', 'Pix', 'Ambos']
+                          .map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _paymentOption = newValue!;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _registerOrEditProduct,
+                      child: Text(widget.productId == null
+                          ? 'Registrar produto'
+                          : 'Editar produto'),
+                    ),
+                  ],
                 ),
-                SizedBox(
-                  height: 20,
-                ),
-                TextFormField(
-                  controller: txtmarca,
-                  keyboardType: TextInputType.text,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(labelText: "Marca"),
-                  style: TextStyle(fontSize: 20),
-                ),
-                SizedBox(
-                  height: 20,
-                ),
-                TextFormField(
-                  controller: txtpreco,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(labelText: "Preço"),
-                  style: TextStyle(fontSize: 20),
-                ),
-                SizedBox(
-                  height: 60,
-                ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 40,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueGrey,
-                        foregroundColor: Colors.white),
-                    onPressed: () {
-                      salvarProduto(produto: widget.produto);
-                    },
-                    child: Text(textBotao),
-                  ),
-                ),
-              ],
-            )),
-      ),
+              ),
+            ),
     );
   }
 }
